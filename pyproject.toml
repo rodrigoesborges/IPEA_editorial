@@ -25,6 +25,7 @@ editorial-docx = "editorial_docx.__main__:main"
 editorial-gold-dataset = "editorial_docx.gold_dataset:main"
 editorial-gold-metrics = "editorial_docx.gold_metrics:main"
 editorial-benchmark = "editorial_docx.benchmark_runner:main"
+editorial-citations-eval = "editorial_docx.citations_eval:main"
 
 [project.optional-dependencies]
 dev = [

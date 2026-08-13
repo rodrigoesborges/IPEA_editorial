@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPEA Editorial — Visão Geral do Projeto</title>
+<style>
+:root {
+  --bg: #1a1b26;
+  --bg-card: #24283b;
+  --bg-code: #1f2335;
+  --fg: #c0caf5;
+  --fg-dim: #565f89;
+  --accent: #7aa2f7;
+  --accent2: #bb9af7;
+  --green: #9ece6a;
+  --red: #f7768e;
+  --yellow: #e0af68;
+  --border: #2f334d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.7;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+h1 {
+  font-size: 1.8rem;
+  color: var(--accent);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: .6rem;
+  margin-bottom: 1.5rem;
+}
+h2 {
+  font-size: 1.4rem;
+  color: var(--accent2);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+h3 {
+  font-size: 1.15rem;
+  color: var(--green);
+  margin-top: 2rem;
+  margin-bottom: .8rem;
+}
+p { margin-bottom: .8rem; }
+strong { color: var(--yellow); }
+em { color: var(--accent); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: .88em;
+  background: var(--bg-code);
+  color: var(--green);
+  padding: .15em .4em;
+  border-radius: 4px;
+}
+pre {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+pre code {
+  background: none;
+  color: var(--fg);
+  padding: 0;
+  font-size: .85em;
+}
+blockquote {
+  border-left: 4px solid var(--accent);
+  background: var(--bg-card);
+  padding: .8rem 1.2rem;
+  margin: 1rem 0;
+  border-radius: 0 8px 8px 0;
+  color: var(--fg);
+}
+blockquote p { margin: 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: .9rem;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: .5rem .8rem;
+  text-align: left;
+}
+th {
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 600;
+}
+tr:nth-child(even) td { background: rgba(36,40,59,.5); }
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+ul, ol { padding-left: 1.5rem; margin-bottom: .8rem; }
+li { margin-bottom: .3rem; }
+</style>
+</head>
+<body>
+<h1 id="ipea-editorial-visao-geral-do-projeto">IPEA Editorial — Visão Geral do Projeto</h1>
+<h2 id="1-natureza-e-estrutura-do-projeto">1) Natureza e Estrutura do Projeto</h2>
+<p>O <strong>IPEA Editorial</strong> é um sistema de <strong>revisão editorial automatizada</strong> para documentos acadêmicos (.docx, .pdf). Ele foi construído para o IPEA (Instituto de Pesquisa Econômica Aplicada) e faz exatamente o que um revisor humano faria: lê o texto inteiro, identifica problemas de gramática, tipografia, tabelas, figuras, <strong>referências bibliográficas</strong>, e devolve o documento com <strong>comentários orientados (balões do Word)</strong> apontando cada erro e sugerindo a correção.</p>
+<h3 id="como-o-pipeline-funciona-4-camadas">Como o pipeline funciona (4 camadas)</h3>
+<pre><code>Documento de entrada (.docx/.pdf)
+        │
+        ▼
+┌─ 1. Carga ──────────────────────────────────────┐
+│  document_loader.py                              │
+│  Lê o arquivo, extrai parágrafos, classifica     │
+│  cada bloco (cabeçalho, corpo, referência, etc.) │
+│  → gera um &quot;NormalizedDocument&quot;                  │
+└──────────────────────────────────────────────────┘
+        │
+        ▼
+┌─ 2. Escopo ─────────────────────────────────────┐
+│  pipeline/scope.py                               │
+│  Decide quais parágrafos cada agente vai ver     │
+│  (ex.: agente de referências só vê a lista final │
+│   + citações no corpo, não vê a bibliografia)    │
+└──────────────────────────────────────────────────┘
+        │
+        ▼
+┌─ 3. Execução ───────────────────────────────────┐
+│  agents/ + prompts/ + LLM (modelos de IA)        │
+│  6 agentes rodam em paralelo (até 3 por vez):    │
+│                                                   │
+│  • sinopse_abstract  (sin) — resumo/abstract      │
+│  • gramatica_ortografia (gram) — gramática        │
+│  • coerencia_logica (log) — coerência [experimental]│
+│  • tabelas_figuras (tab) — tabelas e figuras      │
+│  • referencias (ref) — citações e referências     │
+│  • tipografia (tip) — tipo, negrito, itálico...   │
+│                                                   │
+│  Cada agente:                                     │
+│    1. Roda heurísticas determinísticas (regex,    │
+│       regras ABNT) — sem IA, 100% reprodutível    │
+│    2. Chama o LLM para análises mais complexas    │
+│    3. Valida/filtra resultados (descarta lixo)    │
+└──────────────────────────────────────────────────┘
+        │
+        ▼
+┌─ 4. Consolidação ───────────────────────────────┐
+│  pipeline/consolidation.py + coordinator.py      │
+│  Junta tudo, remove duplicatas, ordena comentários│
+│  → exporta DOCX com balões + relatório JSON       │
+└──────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="a-camada-de-referencias-bibliograficas-nosso-foco">A camada de referências bibliográficas (nosso foco)</h3>
+<p>É a parte mais complexa do sistema, separada em três etapas:</p>
+<table>
+<thead>
+<tr>
+<th>Etapa</th>
+<th>Módulo</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Extração</td>
+<td><code>abnt_citation_parser.py</code></td>
+<td>Encontra citações no corpo do texto: <code>(Silva, 2023)</code>, <code>Silva (2023)</code>, etc.</td>
+</tr>
+<tr>
+<td>Pareamento</td>
+<td><code>abnt_matcher.py</code></td>
+<td>Compara cada citação com cada referência da lista final</td>
+</tr>
+<tr>
+<td>Validação</td>
+<td><code>abnt_validator.py</code></td>
+<td>Verifica se cada referência segue as regras da ABNT (NBR 6023)</td>
+</tr>
+</tbody>
+</table>
+<p>O resultado é um objeto chamado <code>ReferencePipelineArtifact</code> (em <code>models.py</code>) que contém: citações encontradas, referências encontradas, âncoras exatas/prováveis, citações órfãs (sem referência) e referências órfãs (sem citação).</p>
+<h3 id="onde-moram-os-arquivos">Onde moram os arquivos</h3>
+<pre><code>src/editorial_docx/
+├── __main__.py          ← CLI (linha de comando)
+├── graph_chat.py        ← fachada de orquestração (789 linhas)
+├── config.py            ← configuração de runtime
+├── models.py            ← estruturas de dados centrais
+├── document_loader.py   ← leitura de .docx/.pdf
+├── docx_utils.py        ← escrita de .docx com comentários (1.467 linhas!)
+├── abnt_*.py            ← 7 módulos de regras bibliográficas ABNT
+├── citations_eval.py    ← nosso pipeline de teste (novo)
+├── pipeline/            ← orquestração, escopo, validação
+├── agents/              ← heurísticas + validação por agente
+├── prompts/             ← instruções de sistema de cada agente
+└── references/          ← shims (apelidos) dos módulos abnt_*
+
+streamlit_app.py         ← interface web (1.155 linhas)
+testes/                  ← testes + dataset ouro
+pyproject.toml           ← configuração do projeto Python
+</code></pre>
+<hr />
+<h2 id="2-fraquezas-principais">2) Fraquezas Principais</h2>
+<p>O projeto é funcional e está em produção, mas tem problemas estruturais conhecidos (inclusive documentados pelos próprios autores):</p>
+<h3 id="critico-testes-nao-estao-no-git">Crítico: testes não estão no git</h3>
+<p>O <code>.gitignore</code> contém <code>/testes</code> — <strong>a pasta inteira de testes é ignorada pelo Git</strong>. Isso significa que os testes não são versionados, não rodam em CI, e mudanças de código podem quebrar coisas sem ninguém perceber. O mesmo vale para <code>*.json</code> e <code>*.docx</code> (globais).</p>
+<h3 id="critico-o-dataset-ouro-esta-vazio">Crítico: o "dataset ouro" está vazio</h3>
+<p>Existe toda a ferramenta para medir qualidade (<code>gold_dataset.py</code>, <code>gold_metrics.py</code>), mas <code>metricas_reais.json</code> mostra <strong>zero anotações humanas reais</strong> — todas as métricas são 0.0. Não há baseline para detectar se uma mudança de prompt piorou ou melhorou o sistema.</p>
+<h3 id="arquitetura-duplicada">Arquitetura duplicada</h3>
+<table>
+<thead>
+<tr>
+<th>Problema</th>
+<th>Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dois orquestradores</strong></td>
+<td><code>graph_chat.py</code> (789 linhas) e <code>pipeline/orchestrator.py</code> (326 linhas) fazem quase a mesma coisa</td>
+</tr>
+<tr>
+<td><strong>11 arquivos shim</strong></td>
+<td>As pastas <code>references/</code> e <code>io/</code> são só <code>from ..X import *</code> — espelhos dos módulos <code>abnt_*.py</code> e dos arquivos raiz. Dois caminhos de import para o mesmo código</td>
+</tr>
+<tr>
+<td><strong>Funções duplicadas</strong></td>
+<td><code>pipeline/runtime.py</code> define <code>_parse_comments_with_status</code> duas vezes (linhas 547 e 699) com strings diferentes (<code>"sem conteúdo"</code> vs <code>"sem conteudo"</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sem-eval-automatizado">Sem eval automatizado</h3>
+<p>O roadmap interno lista 7 melhorias arquiteturais (async, tracing, structured outputs, etc.) — <strong>todas marcadas como <code>pending</code></strong>. Mudanças de prompt acontecem "no escuro", sem portão de qualidade.</p>
+<h3 id="monolito-de-teste">Monolito de teste</h3>
+<p><code>test_graph_chat.py</code> tem <strong>4.715 linhas</strong> num arquivo só — impraticável de manter.</p>
+<h3 id="documentacao-com-paths-windows">Documentação com paths Windows</h3>
+<p>Os <code>.md</code> em <code>docs/</code> têm caminhos hardcoded (<code>D:\github\lang_IPEA_editorial\...</code>) que não funcionam no Linux.</p>
+<hr />
+<h2 id="3-nossa-primeira-tarefa-pipeline-de-teste-para-referencias">3) Nossa Primeira Tarefa: Pipeline de Teste para Referências</h2>
+<h3 id="o-problema-que-resolvemos">O problema que resolvemos</h3>
+<p>O agente <code>referencias</code> usa um LLM para encontrar inconsistências entre citações e referências. Mas <strong>como saber se o LLM está certo?</strong> Sem um padrão-ouro (ground truth), é impossível medir precisão, recall, ou detectar regressões.</p>
+<h3 id="a-ideia-central">A ideia central</h3>
+<blockquote>
+<p><strong>Comparar duas versões do mesmo documento</strong> (antes e depois da revisão humana) e derivar o ground truth automaticamente.</p>
+</blockquote>
+<pre><code>Documento PRÉ-edição          Documento PÓS-edição
+      │                              │
+      ▼                              ▼
+ Motor determinístico           Motor determinístico
+ (parsers ABNT + matcher)       (parsers ABNT + matcher)
+      │                              │
+      ▼                              ▼
+ Snapshot A                      Snapshot B
+ {citações, referências,         {citações, referências,
+  problemas encontrados}          problemas encontrados}
+      │                              │
+      └──────────┬───────────────────┘
+                 ▼
+          diff_snapshots()
+                 │
+         ┌───────┴───────┐
+         ▼               ▼
+   GOLD POSITIVES   GOLD NEGATIVES
+   (problemas que    (problemas que
+    o editor          persistiram —
+    resolveu)         o editor decidiu
+                      que não eram erro)
+</code></pre>
+<p><strong>Intuição:</strong> se um problema aparece na versão pré-editada mas desaparece na pós-editada, o editor o resolveu → era um erro real (<strong>gold positive</strong>). Se aparece nas duas versões, o editor o manteve → não era erro, ou era algo aceitável (<strong>gold negative</strong>).</p>
+<h3 id="o-pipeline-que-construimos-citations_evalpy">O pipeline que construímos: <code>citations_eval.py</code></h3>
+<p>O módulo implementa 5 estágios:</p>
+<table>
+<thead>
+<tr>
+<th>Estágio</th>
+<th>Função</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0</strong></td>
+<td><code>analyze_loaded_document()</code></td>
+<td>Roda os mesmos parsers ABNT do sistema real sobre um documento, produzindo um snapshot com citações, referências e problemas</td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td><code>diff_snapshots()</code></td>
+<td>Compara pré vs pós e deriva gold positives / gold negatives</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td><code>classify_llm_comments()</code></td>
+<td>Pega o relatório do LLM e classifica cada comentário: <strong>TP</strong> (acertou), <strong>FP</strong> (falso positivo), <strong>FN</strong> (perdeu um erro real), <strong>unmatched</strong> (não casou com nada)</td>
+</tr>
+<tr>
+<td><strong>5a</strong></td>
+<td><code>build_diff_json()</code></td>
+<td>Gera JSON com métricas: precision, recall, F1, recall por tipo</td>
+</tr>
+<tr>
+<td><strong>5b</strong></td>
+<td><code>build_gold_dataset()</code></td>
+<td>Gera dataset no formato do <code>gold_metrics.py</code> para uso futuro em CI</td>
+</tr>
+</tbody>
+</table>
+<h3 id="classificacao-dos-comentarios-do-llm">Classificação dos comentários do LLM</h3>
+<pre><code>Comentário do LLM
+      │
+      ▼
+ Extrai (autor, ano) do texto do comentário
+ (via extract_citation_candidates / parse_reference_entry)
+      │
+      ▼
+ Adivinha o tipo: &quot;missing_citation&quot;? &quot;uncited_reference&quot;? &quot;probable_match&quot;?
+      │
+      ▼
+ Compara com o gold diff:
+   ┌─ Está em gold_positives? → TRUE POSITIVE ✓
+   ├─ Está em gold_negatives? → FALSE POSITIVE (persistiu) ✗
+   ├─ Está no snapshot determinístico? → LLM confirmou heurística
+   └─ Não está em nenhum?     → FALSE POSITIVE (novel) ✗
+</code></pre>
+<h3 id="as-metricas-que-calculamos">As métricas que calculamos</h3>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th>Fórmula</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Precision</strong></td>
+<td>TP / (TP + FP)</td>
+<td>Dos que o LLM flagrou, quantos eram reais?</td>
+</tr>
+<tr>
+<td><strong>Recall</strong></td>
+<td>TP / (TP + FN)</td>
+<td>Dos reais, quantos o LLM flagrou?</td>
+</tr>
+<tr>
+<td><strong>F1</strong></td>
+<td>2·P·R/(P+R)</td>
+<td>Média harmônica</td>
+</tr>
+<tr>
+<td><strong>Recall_missing</strong></td>
+<td>detectados / gold_missing</td>
+<td>Recall só para citações sem referência</td>
+</tr>
+<tr>
+<td><strong>Recall_uncited</strong></td>
+<td>detectados / gold_uncited</td>
+<td>Recall só para referências sem citação</td>
+</tr>
+</tbody>
+</table>
+<h3 id="como-usar">Como usar</h3>
+<pre><code class="language-bash"># Linha de comando
+uv run editorial-citations-eval \
+  --original documento_pre.docx \
+  --final documento_pos.docx \
+  --report relatorio_llm.json \
+  --output diff.json \
+  --gold-output dataset_ouro.json \
+  --model-name gpt-5.2 \
+  --run-label &quot;exp-001&quot;
+</code></pre>
+<pre><code class="language-python"># Em código Python
+from editorial_docx.citations_eval import run_citation_eval
+resultado = run_citation_eval(
+    Path(&quot;pre.docx&quot;), Path(&quot;pos.docx&quot;),
+    report_path=Path(&quot;relatorio.json&quot;),
+)
+print(f&quot;Precision: {resultado.metrics.precision:.2%}&quot;)
+print(f&quot;Recall:    {resultado.metrics.recall:.2%}&quot;)
+</code></pre>
+<h3 id="cobertura-de-testes">Cobertura de testes</h3>
+<p>Criamos 13 testes em <code>testes/test_citations_pipeline.py</code> que rodam offline (sem LLM, sem rede), usando documentos sintéticos. Todos passam:</p>
+<table>
+<thead>
+<tr>
+<th>Teste</th>
+<th>O que verifica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_analyze_loaded_document_finds_missing_and_uncited</code></td>
+<td>Detecta citação sem ref e ref sem citação</td>
+</tr>
+<tr>
+<td><code>test_analyze_loaded_document_finds_exact_match_silva</code></td>
+<td>Confirma match exato Silva</td>
+</tr>
+<tr>
+<td><code>test_diff_snapshots_resolved_vs_persisted</code></td>
+<td>Diff separa resolvidos de persistidos</td>
+</tr>
+<tr>
+<td><code>test_canonical_citation_key_from_text_extracts_narrative</code></td>
+<td>Extrai chave de citação narrativa</td>
+</tr>
+<tr>
+<td><code>test_canonical_citation_key_from_text_extracts_reference</code></td>
+<td>Extrai chave de referência ABNT</td>
+</tr>
+<tr>
+<td><code>test_canonical_citation_key_from_text_returns_none_for_garbage</code></td>
+<td>Rejeita texto sem citação</td>
+</tr>
+<tr>
+<td><code>test_extract_citation_comments_from_report_filters</code></td>
+<td>Filtra só comentários de referência</td>
+</tr>
+<tr>
+<td><code>test_classify_llm_comments_matches_gold_positive</code></td>
+<td>Classifica TP corretamente</td>
+</tr>
+<tr>
+<td><code>test_classify_llm_comments_flags_fp_persisted</code></td>
+<td>Classifica FP persistido</td>
+</tr>
+<tr>
+<td><code>test_build_gold_dataset_schema_matches_taxonomy</code></td>
+<td>Schema do dataset ouro válido</td>
+</tr>
+<tr>
+<td><code>test_build_diff_json_three_blocks_present</code></td>
+<td>JSON de diff tem todos os blocos</td>
+</tr>
+<tr>
+<td><code>test_run_citation_eval_end_to_end_synthetic</code></td>
+<td>Pipeline ponta-a-ponta funciona</td>
+</tr>
+<tr>
+<td><code>test_pipeline_artifact_conversion_round_trip</code></td>
+<td>Conversão para artifact preserva dados</td>
+</tr>
+</tbody>
+</table>
+<h3 id="por-que-isso-importa">Por que isso importa</h3>
+<p>Este pipeline é o <strong>primeiro passo</strong> para ter um eval automatizado: rode o agente de referências em um documento, compare com o que o editor realmente fez, e meça objetivamente se o LLM está melhorando ou piorando a cada mudança de prompt. Sem isso, qualquer ajuste é uma aposta cega.</p>
+</body>
+</html>
